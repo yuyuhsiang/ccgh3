@@ -7,49 +7,118 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
+    /* 基本樣式 */
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { display: flex; height: 100vh; font-family: Arial, sans-serif; }
-    #controls { width: 45%; padding: 1rem; border-right: 1px solid #ccc; background-color: #f9f9f9; overflow-y: auto; }
+    
+    /* 頁面佈局 */
+    body {
+      display: flex;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      background-color: #f0f2f5;
+      padding: 1rem;
+      gap: 1rem;
+    }
+
+    /* 左側控制區樣式 */
+    #controls {
+      width: 45%;
+      padding: 1rem;
+      background-color: #ffffff;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+    }
     #controls h2 { font-size: 1.2rem; margin-bottom: 0.5rem; border-bottom: 1px solid #ddd; padding-bottom: 0.3rem; }
     #controls label, #controls input, #controls select { display: block; width: 100%; margin-bottom: 0.8rem; font-size: 0.95rem; }
     #controls input[type="file"] { padding: 0.3rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.9rem; }
-    thead { background-color: #eaeaea; }
+    
+    /* 表格樣式 */
+    .table-container {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    thead { background-color: #eaeaea; flex-shrink: 0; }
     th, td { border: 1px solid #ddd; padding: 0.4rem; text-align: center; }
-    tbody { display: block; max-height: 550px; overflow-y: auto; }
-    tbody tr, thead, tbody tr { display: table; width: 100%; table-layout: fixed; }
+    tbody { display: block; overflow-y: auto; }
+    thead, tbody tr { display: table; width: 100%; table-layout: fixed; }
     tbody tr:nth-child(even) { background-color: #f9f9f9; }
-    #charts { width: 55%; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
-    canvas { background-color: #fff; border: 1px solid #ddd; border-radius: 8px; flex: 0 0 30%; max-height: 200px; }
+
+    /* 右側圖表區樣式 */
+    #charts-container {
+      width: 55%;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #ffffff;
+      overflow: hidden;
+    }
+    
+    .tab-bar { border-bottom: 1px solid #ccc; display: flex; flex-shrink: 0; }
+    .tab-button {
+      background-color: #f1f1f1; border: none; border-right: 1px solid #ccc;
+      padding: 10px 15px; cursor: pointer; font-size: 1rem;
+    }
+    .tab-button:last-child { border-right: none; }
+    .tab-button:hover { background-color: #ddd; }
+    .tab-button.active { background-color: #fff; font-weight: bold; }
+
+    .chart-content {
+      flex-grow: 1; padding: 1rem; opacity: 0; visibility: hidden;
+      transition: opacity 0.3s ease-in-out; display: none;
+    }
+    .chart-content.active { opacity: 1; visibility: visible; display: block; }
+    canvas { background-color: #fff; max-width: 100%; max-height: 100%; }
+
   </style>
 </head>
 <body>
   <aside id="controls">
-    <h2>上傳 Excel</h2>
-    <input type="file" id="fileInput" accept=".xlsx,.xls">
-    <h2>篩選條件</h2>
-    <label>部門：
-      <select id="deptSelect"><option value="">全部</option></select>
-    </label>
-    <label>職稱：
-      <select id="titleSelect"><option value="">全部</option></select>
-    </label>
-    <h2>人員列表</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>員編</th><th>部門</th><th>職稱</th><th>姓名</th>
-          <th>年齡</th><th>到職日</th><th>年資</th><th>學歷</th><th>進階證明</th>
-        </tr>
-      </thead>
-      <tbody id="personTable"></tbody>
-    </table>
+    <div>
+      <h2>上傳 Excel</h2>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+      <h2>篩選條件</h2>
+      <label>部門：
+        <select id="deptSelect"><option value="">全部</option></select>
+      </label>
+      <label>職稱：
+        <select id="titleSelect"><option value="">全部</option></select>
+      </label>
+      <h2>人員列表</h2>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>員編</th><th>部門</th><th>職稱</th><th>姓名</th>
+            <th>年齡</th><th>到職日</th><th>年資</th><th>學歷</th><th>進階證明</th>
+          </tr>
+        </thead>
+        <tbody id="personTable"></tbody>
+      </table>
+    </div>
   </aside>
 
-  <main id="charts">
-    <canvas id="ageChart"></canvas>
-    <canvas id="eduChart"></canvas>
-    <canvas id="certChart"></canvas>
+  <main id="charts-container">
+    <div class="tab-bar">
+      <button class="tab-button active" onclick="openChart(event, 'age')">年齡分布</button>
+      <button class="tab-button" onclick="openChart(event, 'edu')">學歷分布</button>
+      <button class="tab-button" onclick="openChart(event, 'cert')">進階證明</button>
+    </div>
+    <div id="age" class="chart-content active">
+      <canvas id="ageChart"></canvas>
+    </div>
+    <div id="edu" class="chart-content">
+      <canvas id="eduChart"></canvas>
+    </div>
+    <div id="cert" class="chart-content">
+      <canvas id="certChart"></canvas>
+    </div>
   </main>
 
   <script>
@@ -61,6 +130,20 @@
     const titleSel = document.getElementById('titleSelect');
     const tableBody = document.getElementById('personTable');
     let ageChart, eduChart, certChart;
+    let chartsInitialized = false;
+
+    function openChart(evt, chartName) {
+      const chartContents = document.getElementsByClassName("chart-content");
+      for (let i = 0; i < chartContents.length; i++) {
+        chartContents[i].classList.remove("active");
+      }
+      const tabButtons = document.getElementsByClassName("tab-button");
+      for (let i = 0; i < tabButtons.length; i++) {
+        tabButtons[i].classList.remove("active");
+      }
+      document.getElementById(chartName).classList.add("active");
+      evt.currentTarget.classList.add("active");
+    }
 
     fileInput.addEventListener('change', e => {
       const f = e.target.files[0];
@@ -72,29 +155,44 @@
         const ws = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
         rawData = json.map(item => {
-          // 正確的年齡欄位名稱
           const ageKey = '年齡(出生日期，自動換算';
           const ageValue = item[ageKey] !== undefined ? parseInt(item[ageKey]) : 0;
-          // 處理到職日
           let doj = item['到職日'];
           if (doj instanceof Date) doj = doj.toISOString().split('T')[0];
           return {
-            員編: item['員編'] || '',
-            部門: item['部門'] || '未填',
-            職稱: item['職稱'] || '未填',
-            姓名: item['姓名'] || '',
-            年齡: ageValue,
-            到職日: doj || '',
-            年資: item['年資(到職日，自動換算)'] || '',
-            學歷: item['學歷'] || '未填',
-            證明: item['護理人員進階證明'] || '未填'
+            員編: item['員編'] || '', 部門: item['部門'] || '未填', 職稱: item['職稱'] || '未填',
+            姓名: item['姓名'] || '', 年齡: ageValue, 到職日: doj || '',
+            年資: item['年資(到職日，自動換算)'] || '', 學歷: item['學歷'] || '未填', 證明: item['護理人員進階證明'] || '未填'
           };
         });
+        if (!chartsInitialized) {
+          initializeCharts();
+        }
         initFilters();
         applyFilter();
       };
       reader.readAsArrayBuffer(f);
     });
+    
+    function initializeCharts() {
+      const paleColors = ['#A8D5E2','#FFE5A5','#D5E8D4','#F8CCD1','#E6D5F5','#F5E6D5'];
+      
+      ageChart = new Chart(document.getElementById('ageChart'), {
+        type: 'bar', data: { labels: [], datasets: [{ label: '人數', data: [], backgroundColor: paleColors[0] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '年齡分布' }, datalabels: { color: '#333', anchor: 'end', align: 'top' } }, scales: { y: { beginAtZero: true } } }
+      });
+
+      eduChart = new Chart(document.getElementById('eduChart'), {
+        type: 'pie', data: { labels: [], datasets: [{ data: [], backgroundColor: paleColors.slice(1) }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '學歷分布' }, datalabels: { formatter: (v, ctx) => ctx.chart.data.labels[ctx.dataIndex] + ':' + v + '人', color: '#333' } } }
+      });
+
+      certChart = new Chart(document.getElementById('certChart'), {
+        type: 'pie', data: { labels: [], datasets: [{ data: [], backgroundColor: paleColors.slice(2) }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: '進階證明' }, datalabels: { formatter: (v, ctx) => ctx.chart.data.labels[ctx.dataIndex] + ':' + v + '人', color: '#333' } } }
+      });
+      chartsInitialized = true;
+    }
 
     function initFilters() {
       deptSel.innerHTML = '<option value="">全部</option>';
@@ -108,20 +206,18 @@
 
     function applyFilter() {
       const d = deptSel.value, t = titleSel.value;
-      filtered = rawData.filter(item =>
-        (d === '' || item.部門 === d) &&
-        (t === '' || item.職稱 === t)
-      );
+      filtered = rawData.filter(item => (d === '' || item.部門 === d) && (t === '' || item.職稱 === t));
       renderTable();
-      renderCharts();
+      if (chartsInitialized) {
+        renderCharts();
+      }
     }
 
     function renderTable() {
       tableBody.innerHTML = '';
       filtered.forEach(p => {
         const tr = document.createElement('tr');
-        ['員編','部門','職稱','姓名','年齡','到職日','年資','學歷','證明']
-        .forEach(key => {
+        ['員編','部門','職稱','姓名','年齡','到職日','年資','學歷','證明'].forEach(key => {
           const td = document.createElement('td');
           td.textContent = p[key];
           tr.append(td);
@@ -137,56 +233,29 @@
         return acc;
       }, {});
     }
-
+    
     function renderCharts() {
-      const bins = ['0-9','10-19','20-29','30-39','40-49','50-59','60-69','70-79','80-89','90-99'];
+      // --- 唯一的修改處 ---
+      const bins = ['18-25','26-30','31-35','36-40','41-45','46-50','51-55','56-60','61-65','66-70'];
+      
       const ageCounts = bins.map(bin => {
         const [min, max] = bin.split('-').map(Number);
         return filtered.filter(p => p.年齡 >= min && p.年齡 <= max).length;
       });
       const edus = countBy(filtered, '學歷');
       const certs = countBy(filtered, '證明');
-      const paleColors = ['#A8D5E2','#FFE5A5','#D5E8D4','#F8CCD1','#E6D5F5','#F5E6D5'];
 
-      if (ageChart) ageChart.destroy();
-      ageChart = new Chart(document.getElementById('ageChart'), {
-        type: 'bar',
-        data: { labels: bins, datasets: [{ label: '人數', data: ageCounts, backgroundColor: paleColors[0] }] },
-        options: {
-          responsive: true,
-          plugins: {
-            title: { display: true, text: '年齡分布' },
-            datalabels: { color: '#333', anchor: 'end', align: 'top' }
-          },
-          scales: { y: { beginAtZero: true } }
-        }
-      });
+      ageChart.data.labels = bins;
+      ageChart.data.datasets[0].data = ageCounts;
+      ageChart.update();
 
-      if (eduChart) eduChart.destroy();
-      eduChart = new Chart(document.getElementById('eduChart'), {
-        type: 'pie',
-        data: { labels: Object.keys(edus), datasets: [{ data: Object.values(edus), backgroundColor: paleColors.slice(1) }] },
-        options: {
-          responsive: true,
-          plugins: {
-            title: { display: true, text: '學歷分布' },
-            datalabels: { formatter: (value, ctx) => ctx.chart.data.labels[ctx.dataIndex] + ':' + value, color: '#333' }
-          }
-        }
-      });
+      eduChart.data.labels = Object.keys(edus);
+      eduChart.data.datasets[0].data = Object.values(edus);
+      eduChart.update();
 
-      if (certChart) certChart.destroy();
-      certChart = new Chart(document.getElementById('certChart'), {
-        type: 'pie',
-        data: { labels: Object.keys(certs), datasets: [{ data: Object.values(certs), backgroundColor: paleColors.slice(2) }] },
-        options: {
-          responsive: true,
-          plugins: {
-            title: { display: true, text: '進階證明' },
-            datalabels: { formatter: (value, ctx) => ctx.chart.data.labels[ctx.dataIndex] + ':' + value, color: '#333' }
-          }
-        }
-      });
+      certChart.data.labels = Object.keys(certs);
+      certChart.data.datasets[0].data = Object.values(certs);
+      certChart.update();
     }
   </script>
 </body>
